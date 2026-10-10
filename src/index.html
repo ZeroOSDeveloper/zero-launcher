@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zero Launcher</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-loader="vanilla">
+  <header class="titlebar">
+    <div class="brand"><span class="glyph" aria-hidden="true"></span><b>Zero</b><span>Launcher</span></div>
+    <div class="net" id="net"><i></i><span id="netText">Kontrol ediliyor</span></div>
+    <div class="wc">
+      <button id="wMin" aria-label="Küçült"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+      <button id="wMax" aria-label="Büyüt"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></button>
+      <button id="wClose" class="close" aria-label="Kapat"><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="rail">
+      <button class="tab active" data-view="play" title="Oyna" aria-label="Oyna">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10.5 8.8l4.6 3.2-4.6 3.2z"/></svg>
+      </button>
+      <button class="tab" data-view="console" title="Konsol" aria-label="Konsol">
+        <svg viewBox="0 0 24 24"><path d="M4 6l5 5-5 5M12 18h8"/></svg>
+      </button>
+      <button class="tab" data-view="settings" title="Ayarlar" aria-label="Ayarlar">
+        <svg viewBox="0 0 24 24"><path d="M5 7h9M18 7h1M5 17h1M10 17h9"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+    </nav>
+
+    <main>
+      <!-- OYNA -->
+      <section id="view-play" class="view active">
+        <div class="hero">
+          <div class="ring-wrap idle" id="ringWrap">
+            <svg class="ring" viewBox="0 0 320 320" aria-hidden="true">
+              <circle class="orbit" cx="160" cy="160" r="154" />
+              <circle class="track" cx="160" cy="160" r="140" />
+              <circle class="arc" id="arc" cx="160" cy="160" r="140" />
+              <g class="sat"><circle cx="160" cy="20" r="5" /></g>
+            </svg>
+            <button class="play" id="playBtn">
+              <span class="play-label" id="playLabel">Oyna</span>
+              <span class="play-sub" id="playSub">—</span>
+            </button>
+          </div>
+          <p class="statusline" id="statusLine"></p>
+
+          <div class="loaders" id="loaders" role="tablist" aria-label="Mod yükleyici">
+            <button data-loader="vanilla" class="on">Vanilla</button>
+            <button data-loader="fabric">Fabric</button>
+            <button data-loader="forge">Forge</button>
+            <button data-loader="neoforge">NeoForge</button>
+          </div>
+
+          <div class="controls">
+            <label class="field">
+              <span>Takma ad</span>
+              <input id="nick" maxlength="16" spellcheck="false" autocomplete="off" />
+            </label>
+            <label class="field ram">
+              <span>Bellek <b id="ramVal">4 GB</b></span>
+              <input id="ram" type="range" min="1024" max="16384" step="512" value="4096" />
+            </label>
+          </div>
+        </div>
+
+        <aside class="versions">
+          <div class="v-head">
+            <h2>Sürümler</h2>
+            <span id="vCount" class="count"></span>
+          </div>
+          <input id="search" class="search" placeholder="Sürüm ara, örn. 1.20" spellcheck="false" autocomplete="off" />
+          <div class="chips" id="chips">
+            <button data-t="release" class="on">Sürüm</button>
+            <button data-t="snapshot">Snapshot</button>
+            <button data-t="old">Eski</button>
+          </div>
+          <ul id="vList" class="v-list"></ul>
+        </aside>
+      </section>
+
+      <!-- KONSOL -->
+      <section id="view-console" class="view page">
+        <div class="page-head">
+          <h1>Konsol</h1>
+          <div class="actions">
+            <button class="ghost" id="logCopy">Kopyala</button>
+            <button class="ghost" id="logClear">Temizle</button>
+          </div>
+        </div>
+        <pre id="log" class="log">Henüz çıktı yok. Oyunu başlatınca burada akacak.</pre>
+      </section>
+
+      <!-- AYARLAR -->
+      <section id="view-settings" class="view page">
+        <div class="page-head"><h1>Ayarlar</h1></div>
+        <div class="set-grid">
+          <div class="set">
+            <div>
+              <h3>Oyun açılınca küçül</h3>
+              <p>Oyun başlayınca Zero Launcher görev çubuğuna iner, oyun kapanınca geri gelir.</p>
+            </div>
+            <button class="switch" id="swHide" role="switch" aria-checked="true"><i></i></button>
+          </div>
+          <div class="set">
+            <div>
+              <h3>Oyun klasörü</h3>
+              <p>Seçili sürümün dünyaları, ayarları ve ekran görüntüleri burada durur.</p>
+            </div>
+            <button class="ghost" data-open="game">Aç</button>
+          </div>
+          <div class="set">
+            <div>
+              <h3>Mods klasörü</h3>
+              <p>Fabric, Forge veya NeoForge modlarını bu klasöre bırak.</p>
+            </div>
+            <button class="ghost" data-open="mods">Aç</button>
+          </div>
+          <div class="set">
+            <div>
+              <h3>Launcher verisi</h3>
+              <p>İndirilen sürümler, kütüphaneler ve Java çalışma ortamı.</p>
+            </div>
+            <button class="ghost" data-open="root">Aç</button>
+          </div>
+        </div>
+        <p class="about" id="about"></p>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
