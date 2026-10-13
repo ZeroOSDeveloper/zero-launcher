@@ -16,7 +16,7 @@ const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
 const AdmZip = require('adm-zip');
 
-const UA = 'ZeroLauncher/1.0';
+const UA = 'ZeroLauncher/1.1 (github.com/ZeroOSDeveloper/zero-launcher)';
 const URLS = {
   manifest: 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
   javaAll: 'https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json',
@@ -66,7 +66,7 @@ async function download(url, dest, tries = 3) {
       await fsp.rename(tmp, dest);
       return;
     } catch (e) {
-      if (i === tries - 1) throw new Error(`${url} indirilemedi: ${e.message}`);
+      if (i === tries - 1) throw new Error(`Download failed (${url}): ${e.message}`);
       await sleep(600 * (i + 1));
     }
   }
@@ -305,7 +305,7 @@ async function ensureVanilla(mc) {
   if (!(await exists(jp))) {
     const m = await cached('manifest', () => getJSON(URLS.manifest));
     const e = m.data?.versions.find((v) => v.id === mc);
-    if (!e) throw new Error(`${mc} sürümü bulunamadı. İnternet bağlantısı gerekebilir.`);
+    if (!e) throw new Error(`Version ${mc} not found. An internet connection may be required.`);
     await download(e.url, jp);
   }
   const json = readJson(jp);
@@ -380,7 +380,7 @@ async function ensureJava(component, onProg) {
   if (fs.existsSync(javaBin(component, false)) && fs.existsSync(path.join(base, '.ok'))) return;
   const all = await getJSON(URLS.javaAll);
   const ent = all[platKey()]?.[component]?.[0];
-  if (!ent) throw new Error(`Java çalışma ortamı bulunamadı: ${component}`);
+  if (!ent) throw new Error(`Java runtime not found: ${component}`);
   const man = await getJSON(ent.manifest.url);
   const files = Object.entries(man.files).filter(([, f]) => f.type === 'file');
   let done = 0;
@@ -405,7 +405,7 @@ function runInstaller(javaExe, jar, log) {
     p.stdout.on('data', (d) => log(d.toString()));
     p.stderr.on('data', (d) => log(d.toString()));
     p.on('error', reject);
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Kurulum programı hata kodu ile çıktı: ${code}`))));
+    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Installer exited with code ${code}`))));
   });
 }
 
@@ -413,7 +413,7 @@ async function installFabric(mc) {
   const have = installedLoaderId('fabric', mc);
   if (have) return have;
   const list = await getJSON(URLS.fabricLoader + mc);
-  if (!list.length) throw new Error(`${mc} için Fabric yok.`);
+  if (!list.length) throw new Error(`No Fabric build for ${mc}.`);
   const lv = (list.find((x) => x.loader.stable) || list[0]).loader.version;
   const prof = await getJSON(`${URLS.fabricLoader}${mc}/${lv}/profile/json`);
   const jp = dir('versions', prof.id, prof.id + '.json');
@@ -427,7 +427,7 @@ async function installForge(mc, java, log) {
   if (have) return have;
   const promos = (await getJSON(URLS.forgePromos)).promos;
   const ver = promos[`${mc}-recommended`] || promos[`${mc}-latest`];
-  if (!ver) throw new Error(`${mc} için Forge yok.`);
+  if (!ver) throw new Error(`No Forge build for ${mc}.`);
   const jar = dir('cache', 'installers', `forge-${mc}-${ver}-installer.jar`);
   if (!(await exists(jar))) {
     let ok = false;
@@ -438,12 +438,12 @@ async function installForge(mc, java, log) {
         break;
       } catch {}
     }
-    if (!ok) throw new Error('Forge kurulum dosyası indirilemedi.');
+    if (!ok) throw new Error('Could not download the Forge installer.');
   }
-  log(`[Zero] Forge ${ver} kuruluyor...\n`);
+  log(`[Zero] Installing Forge ${ver}...\n`);
   await runInstaller(java, jar, log);
   const id = installedLoaderId('forge', mc);
-  if (!id) throw new Error('Forge kurulumu tamamlanamadı.');
+  if (!id) throw new Error('Forge installation did not complete.');
   return id;
 }
 
@@ -452,15 +452,15 @@ async function installNeoForge(mc, java, log) {
   if (have) return have;
   const data = await getJSON(URLS.neoVersions);
   const f = data.versions.filter((v) => v.startsWith(neoPrefix(mc)));
-  if (!f.length) throw new Error(`${mc} için NeoForge yok (NeoForge 1.20.2 ve üzerini destekler).`);
+  if (!f.length) throw new Error(`No NeoForge build for ${mc} (NeoForge supports 1.20.2 and newer).`);
   const stable = f.filter((v) => !/alpha|beta/i.test(v));
   const ver = (stable.length ? stable : f).sort(cmpVer).pop();
   const jar = dir('cache', 'installers', `neoforge-${ver}-installer.jar`);
   if (!(await exists(jar))) await download(`${URLS.neoMaven}${ver}/neoforge-${ver}-installer.jar`, jar);
-  log(`[Zero] NeoForge ${ver} kuruluyor...\n`);
+  log(`[Zero] Installing NeoForge ${ver}...\n`);
   await runInstaller(java, jar, log);
   const id = installedLoaderId('neoforge', mc);
-  if (!id) throw new Error('NeoForge kurulumu tamamlanamadı.');
+  if (!id) throw new Error('NeoForge installation did not complete.');
   return id;
 }
 
@@ -487,16 +487,16 @@ function buildArgs(v, c) {
     game_assets: c.gameAssets,
     assets_index_name: v.assetIndex?.id || v.assets,
     auth_uuid: c.uuid,
-    auth_access_token: '0',
-    auth_session: `token:0:${c.uuid}`,
+    auth_access_token: c.token || '0',
+    auth_session: `token:${c.token || '0'}:${c.uuid}`,
     clientid: '0',
     auth_xuid: '0',
-    user_type: 'legacy',
+    user_type: c.userType || 'legacy',
     version_type: 'Zero Launcher',
     user_properties: '{}',
     natives_directory: c.natives,
     launcher_name: 'ZeroLauncher',
-    launcher_version: '1.0.0',
+    launcher_version: '1.1.0',
     classpath: c.classpath,
     classpath_separator: path.delimiter,
     library_directory: dir('libraries')
@@ -534,7 +534,7 @@ function buildArgs(v, c) {
 /* Oyna                                                                */
 /* ------------------------------------------------------------------ */
 function makeProgress(emit) {
-  const stages = [['game', 8], ['java', 14], ['loader', 18], ['libs', 18], ['assets', 38], ['start', 4]];
+  const stages = [['game', 8], ['java', 12], ['loader', 16], ['updates', 4], ['libs', 18], ['assets', 38], ['start', 4]];
   const off = {};
   let acc = 0;
   for (const [n, w] of stages) { off[n] = [acc, w]; acc += w; }
@@ -548,32 +548,43 @@ function gameDirFor(mc, loader) {
   return dir('instances', loader === 'vanilla' ? mc : `${mc}-${loader}`);
 }
 
-async function play({ mc, loader, username, ram }, hooks) {
-  if (current) throw new Error('Oyun zaten çalışıyor.');
+async function play({ mc, loader, username, ram, auth, autoUpdate }, hooks) {
+  if (current) throw new Error('The game is already running.');
   const prog = makeProgress(hooks.progress);
   const log = hooks.log;
 
-  prog('game', 0, 'Sürüm bilgisi hazırlanıyor');
+  prog('game', 0, 'p.prep');
   const vjson = await ensureVanilla(mc);
-  prog('game', 1, 'Sürüm hazır');
+  prog('game', 1, 'p.ready');
 
   const comp = vjson.javaVersion?.component || 'jre-legacy';
   try {
-    await ensureJava(comp, (f) => prog('java', f, 'Java hazırlanıyor'));
+    await ensureJava(comp, (f) => prog('java', f, 'p.java'));
   } catch (e) {
-    if (!fs.existsSync(javaBin(comp, false))) log(`[Zero] Java indirilemedi (${e.message}). Sistemdeki Java denenecek.\n`);
+    if (!fs.existsSync(javaBin(comp, false))) log(`[Zero] Could not download Java (${e.message}). Trying system Java.\n`);
   }
-  prog('java', 1, 'Java hazır');
+  prog('java', 1, 'p.javaReady');
 
   let id = mc;
   if (loader !== 'vanilla') {
-    prog('loader', 0.1, `${LOADER_NAMES[loader]} kuruluyor`);
+    prog('loader', 0.1, 'p.loader');
     const javaCli = resolveJava(comp, false);
     if (loader === 'fabric') id = await installFabric(mc);
     else if (loader === 'forge') id = await installForge(mc, javaCli, log);
     else id = await installNeoForge(mc, javaCli, log);
   }
-  prog('loader', 1, 'Mod yükleyici hazır');
+  prog('loader', 1, 'p.loaderReady');
+
+  if (autoUpdate) {
+    prog('updates', 0.2, 'p.updates');
+    try {
+      const n = await mrUpdateAll({ mc, loader });
+      if (n) log(`[Zero] Updated ${n} item(s) from Modrinth.\n`);
+    } catch (e) {
+      log(`[Zero] Update check skipped: ${e.message}\n`);
+    }
+  }
+  prog('updates', 1, 'p.updates');
 
   const v = resolveVersion(id);
   const entries = libEntries(v);
@@ -583,12 +594,12 @@ async function play({ mc, loader, username, ram }, hooks) {
     if (!(await okFile(p, e.size)) && e.url) {
       try { await download(e.url, p); } catch (err) { if (!(await exists(p))) throw err; }
     }
-    prog('libs', ++done / entries.length, 'Kütüphaneler kontrol ediliyor');
+    prog('libs', ++done / entries.length, 'p.libs');
   });
 
   const gameDir = gameDirFor(mc, loader);
   fs.mkdirSync(gameDir, { recursive: true });
-  const gameAssets = await ensureAssets(v, gameDir, (f) => prog('assets', f, 'Oyun dosyaları indiriliyor'));
+  const gameAssets = await ensureAssets(v, gameDir, (f) => prog('assets', f, 'p.assets'));
 
   const natives = dir('versions', id, 'natives');
   extractNatives(entries, natives);
@@ -601,8 +612,10 @@ async function play({ mc, loader, username, ram }, hooks) {
   ].join(path.delimiter);
 
   const args = buildArgs(v, {
-    username,
-    uuid: offlineUUID(username),
+    username: auth ? auth.name : username,
+    uuid: auth ? auth.uuid : offlineUUID(username),
+    token: auth ? auth.accessToken : null,
+    userType: auth ? 'msa' : 'legacy',
     versionName: id,
     gameDir,
     gameAssets,
@@ -612,16 +625,16 @@ async function play({ mc, loader, username, ram }, hooks) {
     logArg
   });
 
-  prog('start', 0.5, 'Oyun başlatılıyor');
+  prog('start', 0.5, 'p.start');
   const javaExe = resolveJava(comp, true);
-  log(`[Zero] ${javaExe}\n[Zero] ${mc} / ${LOADER_NAMES[loader]} / ${username}\n`);
+  log(`[Zero] ${javaExe}\n[Zero] ${mc} / ${LOADER_NAMES[loader]} / ${auth ? auth.name + ' (Microsoft)' : username + ' (offline)'}\n`);
   const child = spawn(javaExe, args, { cwd: gameDir });
   current = child;
   child.stdout.on('data', (d) => log(d.toString()));
   child.stderr.on('data', (d) => log(d.toString()));
   child.on('error', (e) => { current = null; log(`[HATA] ${e.message}\n`); hooks.exit(-1); });
   child.on('close', (code) => { current = null; hooks.exit(code); });
-  prog('start', 1, 'Oyun çalışıyor');
+  prog('start', 1, 'p.running');
   hooks.started();
 }
 
@@ -629,4 +642,168 @@ function stop() {
   if (current) current.kill();
 }
 
-module.exports = { init, listVersions, play, stop, gameDirFor, isRunning: () => !!current };
+/* ------------------------------------------------------------------ */
+/* Modrinth                                                            */
+/* ------------------------------------------------------------------ */
+const MR = 'https://api.modrinth.com/v2';
+const MR_FOLDER = { mod: 'mods', resourcepack: 'resourcepacks', shader: 'shaderpacks' };
+const mrGet = (p) => getJSON(MR + p);
+const safeName = (n) => path.basename(String(n));
+const idxPath = (mc, loader) => path.join(gameDirFor(mc, loader), '.zero-content.json');
+function readIdx(mc, loader) { try { return readJson(idxPath(mc, loader)); } catch { return {}; } }
+function writeIdx(mc, loader, idx) {
+  fs.mkdirSync(gameDirFor(mc, loader), { recursive: true });
+  fs.writeFileSync(idxPath(mc, loader), JSON.stringify(idx, null, 2));
+}
+
+async function mrSearch({ query, type, mc, loader, sort, offset }) {
+  if (!MR_FOLDER[type]) throw new Error('Unknown project type');
+  const facets = [[`project_type:${type}`], [`versions:${mc}`]];
+  if (type === 'mod' && loader !== 'vanilla') facets.push([`categories:${loader}`]);
+  const q = new URLSearchParams({
+    query: query || '',
+    facets: JSON.stringify(facets),
+    index: ['relevance', 'downloads', 'updated', 'newest', 'follows'].includes(sort) ? sort : 'relevance',
+    limit: '20',
+    offset: String(Math.max(0, offset | 0))
+  });
+  const r = await mrGet('/search?' + q);
+  return {
+    total: r.total_hits,
+    hits: r.hits.map((h) => ({ id: h.project_id, title: h.title, author: h.author, desc: h.description, icon: h.icon_url, downloads: h.downloads }))
+  };
+}
+
+async function mrPost(p, body) {
+  const r = await fetch(MR + p, {
+    method: 'POST',
+    headers: { 'User-Agent': UA, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status} - ${p}`);
+  return r.json();
+}
+const sha1File = async (p) => crypto.createHash('sha1').update(await fsp.readFile(p)).digest('hex');
+
+// Seçilen sürümü indirir, doğrular, dizine yazar, gerekli bağımlılıkları da kurar
+async function mrApplyVersion({ projectId, type, mc, loader, v, seen }) {
+  const file = v.files.find((f) => f.primary) || v.files[0];
+  const fname = safeName(file.filename);
+  const folder = path.join(gameDirFor(mc, loader), MR_FOLDER[type]);
+  const dest = path.join(folder, fname);
+  await download(file.url, dest);
+  const want = file.hashes && file.hashes.sha1;
+  if (want && (await sha1File(dest)) !== want) {
+    await fsp.unlink(dest).catch(() => {});
+    throw new Error(`Checksum mismatch: ${fname}`);
+  }
+
+  let title = fname, icon = null, desc = '';
+  try {
+    const p = await mrGet(`/project/${encodeURIComponent(projectId)}`);
+    title = p.title; icon = p.icon_url; desc = p.description || '';
+  } catch {}
+
+  const idx = readIdx(mc, loader);
+  const key = `${type}:${projectId}`;
+  const old = idx[key];
+  if (old && old.filename !== fname) await fsp.unlink(path.join(folder, safeName(old.filename))).catch(() => {});
+  idx[key] = { title, filename: fname, version: v.version_number, icon, desc };
+  writeIdx(mc, loader, idx);
+
+  const done = [{ projectId, title }];
+  if (type === 'mod') {
+    for (const d of v.dependencies || []) {
+      if (d.dependency_type !== 'required' || !d.project_id) continue;
+      if (readIdx(mc, loader)[`mod:${d.project_id}`]) continue;
+      done.push(...(await mrInstall({ projectId: d.project_id, type: 'mod', mc, loader }, seen)));
+    }
+  }
+  return done;
+}
+
+async function mrInstall({ projectId, type, mc, loader }, seen = new Set()) {
+  if (seen.has(projectId)) return [];
+  seen.add(projectId);
+  if (!MR_FOLDER[type]) throw new Error('Unknown project type');
+
+  const params = new URLSearchParams({ game_versions: JSON.stringify([mc]) });
+  if (type === 'mod') params.set('loaders', JSON.stringify([loader]));
+  const versions = await mrGet(`/project/${encodeURIComponent(projectId)}/version?${params}`);
+  const v = versions.find((x) => x.version_type === 'release') || versions.find((x) => x.version_type === 'beta') || versions[0];
+  if (!v) throw new Error(`No compatible version for ${mc} (${LOADER_NAMES[loader] || loader}).`);
+  return mrApplyVersion({ projectId, type, mc, loader, v, seen });
+}
+
+// Kurulu dosyaların SHA-1 özetiyle Modrinth'ten en yeni uyumlu sürümü sorar
+async function mrFindUpdates({ mc, loader }) {
+  const idx = readIdx(mc, loader);
+  const found = [];
+  for (const type of Object.keys(MR_FOLDER)) {
+    const entries = Object.entries(idx).filter(([k]) => k.startsWith(type + ':'));
+    if (!entries.length) continue;
+    const folder = path.join(gameDirFor(mc, loader), MR_FOLDER[type]);
+    const byHash = {};
+    for (const [k, e] of entries) {
+      const p = path.join(folder, safeName(e.filename));
+      if (await exists(p)) byHash[await sha1File(p)] = k;
+    }
+    const hashes = Object.keys(byHash);
+    if (!hashes.length) continue;
+    const body = { hashes, algorithm: 'sha1', game_versions: [mc] };
+    if (type === 'mod') body.loaders = [loader];
+    const res = await mrPost('/version_files/update', body);
+    for (const [h, ver] of Object.entries(res)) {
+      if (ver.files.some((f) => f.hashes && f.hashes.sha1 === h)) continue; // zaten güncel
+      if (ver.version_type === 'alpha') continue;
+      const k = byHash[h];
+      found.push({ type, projectId: k.slice(type.length + 1), versionNumber: ver.version_number, _v: ver });
+    }
+  }
+  return found;
+}
+
+async function mrCheckUpdates(args) {
+  return (await mrFindUpdates(args)).map(({ _v, ...u }) => u);
+}
+
+async function mrUpdateAll(args) {
+  if (!Object.keys(readIdx(args.mc, args.loader)).length) return 0; // Modrinth içeriği yoksa ağa hiç gitme
+  const list = await mrFindUpdates(args);
+  const seen = new Set();
+  let n = 0;
+  for (const u of list) {
+    await mrApplyVersion({ projectId: u.projectId, type: u.type, mc: args.mc, loader: args.loader, v: u._v, seen });
+    n++;
+  }
+  return n;
+}
+
+function mrInstalled({ mc, loader, type }) {
+  const folder = path.join(gameDirFor(mc, loader), MR_FOLDER[type] || 'mods');
+  let files = [];
+  try { files = fs.readdirSync(folder).filter((f) => !f.startsWith('.')); } catch {}
+  const idx = readIdx(mc, loader);
+  const out = [];
+  const known = new Set();
+  for (const [k, v] of Object.entries(idx)) {
+    if (!k.startsWith(type + ':') || !files.includes(v.filename)) continue;
+    out.push({ projectId: k.slice(type.length + 1), title: v.title, filename: v.filename, version: v.version, icon: v.icon, desc: v.desc });
+    known.add(v.filename);
+  }
+  for (const f of files) if (!known.has(f) && /\.(jar|zip|disabled)$/i.test(f)) out.push({ projectId: null, title: f, filename: f, manual: true });
+  return out;
+}
+
+function mrRemove({ mc, loader, type, filename, projectId }) {
+  const folder = path.join(gameDirFor(mc, loader), MR_FOLDER[type] || 'mods');
+  try { fs.unlinkSync(path.join(folder, safeName(filename))); } catch {}
+  if (projectId) {
+    const idx = readIdx(mc, loader);
+    delete idx[`${type}:${projectId}`];
+    writeIdx(mc, loader, idx);
+  }
+}
+
+module.exports = { init, listVersions, play, stop, gameDirFor, isRunning: () => !!current, mrSearch, mrInstall, mrInstalled, mrRemove, mrCheckUpdates, mrUpdateAll };

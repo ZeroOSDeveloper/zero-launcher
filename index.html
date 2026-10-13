@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.modrinth.com" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zero Launcher</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-loader="vanilla" data-theme="obsidian">
+  <header class="titlebar">
+    <div class="brand"><span class="glyph" aria-hidden="true"></span><b>Zero</b><span>Launcher</span></div>
+    <div class="net" id="net"><i></i><span id="netText"></span></div>
+    <div class="wc">
+      <button id="wMin" aria-label="Minimize"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+      <button id="wMax" aria-label="Maximize"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></button>
+      <button id="wClose" class="close" aria-label="Close"><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="rail">
+      <button class="tab active" data-view="play" data-i18n-title="nav.play">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10.5 8.8l4.6 3.2-4.6 3.2z"/></svg>
+      </button>
+      <button class="tab" data-view="mods" data-i18n-title="nav.mods">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      </button>
+      <button class="tab" data-view="console" data-i18n-title="nav.console">
+        <svg viewBox="0 0 24 24"><path d="M4 6l5 5-5 5M12 18h8"/></svg>
+      </button>
+      <button class="tab" data-view="settings" data-i18n-title="nav.settings">
+        <svg viewBox="0 0 24 24"><path d="M5 7h9M18 7h1M5 17h1M10 17h9"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+    </nav>
+
+    <main>
+      <!-- OYNA -->
+      <section id="view-play" class="view active">
+        <div class="hero">
+          <div class="ring-wrap idle" id="ringWrap">
+            <svg class="ring" viewBox="0 0 320 320" aria-hidden="true">
+              <circle class="orbit" cx="160" cy="160" r="154" />
+              <circle class="track" cx="160" cy="160" r="140" />
+              <circle class="arc" id="arc" cx="160" cy="160" r="140" />
+              <g class="sat"><circle cx="160" cy="20" r="5" /></g>
+            </svg>
+            <button class="play" id="playBtn">
+              <span class="play-label" id="playLabel"></span>
+              <span class="play-sub" id="playSub"></span>
+            </button>
+          </div>
+
+          <div class="hero-text" id="heroText" aria-live="polite">
+            <h2 id="heroH"></h2>
+            <p id="heroS"></p>
+          </div>
+
+          <div class="loaders" id="loaders" role="tablist">
+            <button data-loader="vanilla" class="on">Vanilla</button>
+            <button data-loader="fabric">Fabric</button>
+            <button data-loader="forge">Forge</button>
+            <button data-loader="neoforge">NeoForge</button>
+          </div>
+
+          <div class="controls">
+            <label class="field">
+              <span data-i18n="play.nick"></span>
+              <input id="nick" maxlength="16" spellcheck="false" autocomplete="off" />
+            </label>
+            <label class="field ram">
+              <span><span data-i18n="play.ram"></span> <b id="ramVal">4 GB</b></span>
+              <input id="ram" type="range" min="1024" max="16384" step="512" value="4096" />
+            </label>
+          </div>
+        </div>
+
+        <aside class="versions">
+          <div class="v-head">
+            <h2 data-i18n="ver.title"></h2>
+            <span id="vCount" class="count"></span>
+          </div>
+          <input id="search" class="search" data-i18n-ph="ver.search" spellcheck="false" autocomplete="off" />
+          <div class="chips" id="chips">
+            <button data-t="release" class="on" data-i18n="ver.release"></button>
+            <button data-t="snapshot" data-i18n="ver.snapshot"></button>
+            <button data-t="old" data-i18n="ver.old"></button>
+          </div>
+          <ul id="vList" class="v-list"></ul>
+        </aside>
+      </section>
+
+      <!-- MODRINTH -->
+      <section id="view-mods" class="view page">
+        <div class="page-head">
+          <div>
+            <h1 data-i18n="mods.title"></h1>
+            <p class="sub" id="mrTarget"></p>
+          </div>
+          <div class="seg" id="mrTypes">
+            <button data-type="mod" class="on" data-i18n="mods.t.mod"></button>
+            <button data-type="resourcepack" data-i18n="mods.t.resourcepack"></button>
+            <button data-type="shader" data-i18n="mods.t.shader"></button>
+          </div>
+        </div>
+        <div class="mr-bar">
+          <div class="seg small" id="mrMode">
+            <button data-mode="browse" class="on" data-i18n="mods.browse"></button>
+            <button data-mode="installed"><span data-i18n="mods.installed"></span> <span class="badge" id="mrUpdBadge" hidden></span></button>
+          </div>
+          <input id="mrSearch" class="search grow" data-i18n-ph="mods.search" spellcheck="false" autocomplete="off" />
+          <select id="mrSort" class="select">
+            <option value="relevance" data-i18n="mods.sort.relevance"></option>
+            <option value="downloads" data-i18n="mods.sort.downloads"></option>
+            <option value="updated" data-i18n="mods.sort.updated"></option>
+          </select>
+          <button class="solid" id="mrUpdAll" hidden></button>
+        </div>
+        <div id="mrList" class="mr-list"></div>
+      </section>
+
+      <!-- KONSOL -->
+      <section id="view-console" class="view page">
+        <div class="page-head">
+          <h1 data-i18n="con.title"></h1>
+          <div class="actions">
+            <button class="ghost" id="logCopy" data-i18n="con.copy"></button>
+            <button class="ghost" id="logClear" data-i18n="con.clear"></button>
+          </div>
+        </div>
+        <pre id="log" class="log"></pre>
+      </section>
+
+      <!-- AYARLAR -->
+      <section id="view-settings" class="view page scroll">
+        <div class="page-head"><h1 data-i18n="nav.settings"></h1></div>
+
+        <h2 class="sec" data-i18n="set.general"></h2>
+        <div class="set-grid">
+          <div class="set">
+            <div><h3 data-i18n="set.hide"></h3><p data-i18n="set.hideD"></p></div>
+            <button class="switch" id="swHide" role="switch" aria-checked="true"><i></i></button>
+          </div>
+          <div class="set">
+            <div><h3 data-i18n="set.autoUpd"></h3><p data-i18n="set.autoUpdD"></p></div>
+            <button class="switch" id="swUpd" role="switch" aria-checked="true"><i></i></button>
+          </div>
+          <div class="set col">
+            <div><h3 data-i18n="set.lang"></h3><p data-i18n="set.langD"></p></div>
+            <div class="pills" id="langs"></div>
+          </div>
+        </div>
+
+        <h2 class="sec" data-i18n="set.acc"></h2>
+        <div class="set-grid">
+          <div class="set col">
+            <div><h3 data-i18n="ms.mode"></h3><p data-i18n="ms.desc"></p></div>
+            <div class="seg small" id="playMode" style="align-self:flex-start">
+              <button data-mode="offline" class="on" data-i18n="ms.offline"></button>
+              <button data-mode="microsoft" data-i18n="ms.online"></button>
+            </div>
+          </div>
+          <div class="set">
+            <div class="acct" id="acct"><i class="dot"></i><div><h3 id="acctName"></h3></div></div>
+            <div class="actions">
+              <button class="solid" id="msIn" data-i18n="ms.signin"></button>
+              <button class="ghost" id="msOut" data-i18n="ms.signout" hidden></button>
+            </div>
+          </div>
+          <div class="set col">
+            <div><h3 data-i18n="ms.clientId"></h3><p data-i18n="ms.clientIdD"></p></div>
+            <input class="text-in" id="clientId" placeholder="00000000-0000-0000-0000-000000000000" spellcheck="false" autocomplete="off" />
+          </div>
+        </div>
+
+        <h2 class="sec" data-i18n="set.look"></h2>
+        <div class="set-grid">
+          <div class="set col">
+            <h3 data-i18n="set.theme"></h3>
+            <div class="themes" id="themes">
+              <button class="theme" data-th="obsidian"><i></i><span data-i18n="set.th.obsidian"></span></button>
+              <button class="theme" data-th="slate"><i></i><span data-i18n="set.th.slate"></span></button>
+              <button class="theme" data-th="midnight"><i></i><span data-i18n="set.th.midnight"></span></button>
+              <button class="theme" data-th="paper"><i></i><span data-i18n="set.th.paper"></span></button>
+            </div>
+          </div>
+          <div class="set col">
+            <div class="row">
+              <div><h3 data-i18n="set.accentLoader"></h3><p data-i18n="set.accentLoaderD"></p></div>
+              <button class="switch" id="swAccent" role="switch" aria-checked="true"><i></i></button>
+            </div>
+            <div class="swatches off" id="swatches">
+              <button data-c="#7de2d1" style="--c:#7de2d1"></button>
+              <button data-c="#e8c9a0" style="--c:#e8c9a0"></button>
+              <button data-c="#ff7b47" style="--c:#ff7b47"></button>
+              <button data-c="#a78bfa" style="--c:#a78bfa"></button>
+              <button data-c="#ff5d8f" style="--c:#ff5d8f"></button>
+              <button data-c="#5ab0ff" style="--c:#5ab0ff"></button>
+              <button data-c="#8be65b" style="--c:#8be65b"></button>
+              <button data-c="#ffd447" style="--c:#ffd447"></button>
+              <label class="picker" data-i18n-title="set.accent"><input type="color" id="accentPick" value="#7de2d1" /></label>
+            </div>
+          </div>
+          <div class="set col">
+            <div><h3 data-i18n="set.bg"></h3><p data-i18n="set.bgD"></p></div>
+            <div class="actions">
+              <button class="ghost" id="bgChoose" data-i18n="set.bgChoose"></button>
+              <button class="ghost" id="bgRemove" data-i18n="set.bgRemove"></button>
+            </div>
+            <label class="slider"><h3><span data-i18n="set.bgBright"></span> <b id="bgBrightVal"></b></h3>
+              <input type="range" id="bgBright" min="10" max="100" step="5" /></label>
+          </div>
+          <div><button class="ghost" id="resetLook" data-i18n="set.reset"></button></div>
+        </div>
+
+        <h2 class="sec" data-i18n="set.folders"></h2>
+        <div class="set-grid">
+          <div class="set"><div><h3 data-i18n="set.game"></h3><p data-i18n="set.gameD"></p></div><button class="ghost" data-open="game" data-i18n="set.open"></button></div>
+          <div class="set"><div><h3 data-i18n="set.modsF"></h3><p data-i18n="set.modsD"></p></div><button class="ghost" data-open="mods" data-i18n="set.open"></button></div>
+          <div class="set"><div><h3 data-i18n="set.root"></h3><p data-i18n="set.rootD"></p></div><button class="ghost" data-open="root" data-i18n="set.open"></button></div>
+        </div>
+        <p class="about" id="about"></p>
+      </section>
+    </main>
+  </div>
+
+  <!-- Microsoft giriş penceresi -->
+  <div class="modal" id="msModal" hidden>
+    <div class="modal-card">
+      <h3 data-i18n="ms.codeTitle"></h3>
+      <p data-i18n="ms.codeBody"></p>
+      <div class="code" id="msCode">…</div>
+      <div class="actions">
+        <button class="ghost" id="msCopy" data-i18n="ms.copy"></button>
+        <button class="solid" id="msOpen" data-i18n="ms.open"></button>
+      </div>
+      <p id="msWait" data-i18n="ms.waiting"></p>
+      <button class="ghost" id="msCancel" data-i18n="ms.cancel"></button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="i18n.js"></script>
+  <script src="i18n2.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

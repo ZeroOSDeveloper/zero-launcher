@@ -1,7 +1,7 @@
 {
   "name": "zero-launcher",
-  "version": "1.0.0",
-  "description": "Zero Launcher - Hesapsız, çevrimdışı Minecraft Java launcher (Vanilla, Fabric, Forge, NeoForge)",
+  "version": "1.1.0",
+  "description": "Zero Launcher - Hesapsız çevrimdışı ya da Microsoft hesabıyla Minecraft Java launcher (Vanilla, Fabric, Forge, NeoForge, Modrinth)",
   "main": "main.js",
   "author": "Zero Launcher",
   "license": "MIT",
@@ -19,13 +19,33 @@
   "build": {
     "appId": "com.zero.launcher",
     "productName": "Zero Launcher",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "core.js", "preload.js", "src/**/*", "build/icon.png", "package.json"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "core.js",
+      "ms.js",
+      "preload.js",
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
     "win": {
       "icon": "build/icon.png",
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
